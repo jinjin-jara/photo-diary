@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Couples collection
+    match /couples/{coupleId} {
+      // Anyone logged in can create a couple
+      allow create: if request.auth != null;
+
+      // Only members can read
+      allow read: if request.auth != null &&
+        (resource.data.user1 == request.auth.uid ||
+         resource.data.user2 == request.auth.uid);
+
+      // Allow reading by invite code (for joining)
+      allow read: if request.auth != null &&
+        resource.data.inviteCode != null;
+
+      // Only update user2 (joining)
+      allow update: if request.auth != null &&
+        resource.data.user2 == null &&
+        request.resource.data.user2 == request.auth.uid;
+    }
+
+    // Diaries collection
+    match /diaries/{diaryId} {
+      // Can create if authenticated and part of the couple
+      allow create: if request.auth != null &&
+        isCoupleMatched(request.resource.data.coupleId, request.auth.uid);
+
+      // Shared diaries: both couple members can read
+      // Secret diaries: only the author can read
+      allow read: if request.auth != null &&
+        isCoupleMatched(resource.data.coupleId, request.auth.uid) &&
+        (!resource.data.isSecret || resource.data.authorId == request.auth.uid);
+
+      // Only author can delete
+      allow delete: if request.auth != null &&
+        resource.data.authorId == request.auth.uid;
+    }
+
+    function isCoupleMatched(coupleId, uid) {
+      let couple = get(/databases/$(database)/documents/couples/$(coupleId));
+      return couple != null &&
+        (couple.data.user1 == uid || couple.data.user2 == uid);
+    }
+  }
+}
