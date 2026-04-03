@@ -40,7 +40,7 @@ App.Router.register('#/write', async () => {
 
       <div class="write-field">
         <label>제목</label>
-        <textarea class="write-title-input" id="write-title" placeholder="오늘 하루를 한 줄로" rows="1"></textarea>
+        <textarea class="write-title-input" id="write-title" placeholder="제목" rows="1"></textarea>
       </div>
 
       <div class="write-field">
