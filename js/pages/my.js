@@ -5,9 +5,30 @@ App.Router.register('#/my', async () => {
   const coupleId = App.Couple.currentCouple.id;
   const uid = App.Auth.getUid();
 
+  // Load profile
+  const profile = await App.DB.getProfile(uid) || {};
+  const nickname = profile.nickname || App.Auth.getDisplayName();
+  const photoURL = profile.photoURL || '';
+
   app.innerHTML = `
     <div class="my-page">
-      <h2>마이</h2>
+      <div class="my-profile">
+        <div class="my-profile-photo-wrap" id="profile-photo-wrap">
+          <input type="file" accept="image/*" id="profile-photo-input" style="display:none">
+          ${photoURL
+            ? `<img class="my-profile-photo" id="profile-photo" src="${photoURL}" alt="">`
+            : `<div class="my-profile-photo" id="profile-photo" style="display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--color-text-muted);">${App.escapeHtml(nickname[0])}</div>`
+          }
+          <div class="my-profile-photo-edit">
+            <svg viewBox="0 0 24 24" stroke-width="2">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+        </div>
+        <input class="my-profile-nickname" id="profile-nickname" value="${App.escapeHtml(nickname)}" placeholder="닉네임">
+        <div class="my-profile-hint">탭하여 닉네임 변경</div>
+      </div>
 
       <div class="my-section">
         <h3>비밀 일기</h3>
@@ -21,7 +42,7 @@ App.Router.register('#/my', async () => {
         <div class="my-settings">
           <button class="my-settings-item" id="settings-couple">
             <span>커플 정보</span>
-            <span class="my-settings-value">${App.Auth.getDisplayName()}</span>
+            <span class="my-settings-value">${App.escapeHtml(nickname)}</span>
           </button>
           <button class="my-settings-item" id="settings-logout">
             <span>로그아웃</span>
@@ -32,7 +53,57 @@ App.Router.register('#/my', async () => {
     </div>
   `;
 
-  // Load secret diaries
+  // Profile photo upload
+  const photoInput = document.getElementById('profile-photo-input');
+  document.getElementById('profile-photo-wrap').onclick = () => photoInput.click();
+
+  photoInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const base64 = await resizeProfilePhoto(file);
+      await App.DB.setProfile(uid, { photoURL: base64 });
+
+      const photoEl = document.getElementById('profile-photo');
+      if (photoEl.tagName === 'IMG') {
+        photoEl.src = base64;
+      } else {
+        const img = document.createElement('img');
+        img.className = 'my-profile-photo';
+        img.id = 'profile-photo';
+        img.src = base64;
+        photoEl.replaceWith(img);
+      }
+      App.Toast.show('프로필 사진 변경 완료');
+    } catch (err) {
+      console.error('Profile photo failed:', err);
+      App.Toast.show('사진 변경에 실패했습니다');
+    }
+  };
+
+  // Nickname save on blur
+  const nicknameInput = document.getElementById('profile-nickname');
+  nicknameInput.addEventListener('blur', async () => {
+    const newNickname = nicknameInput.value.trim();
+    if (!newNickname) {
+      nicknameInput.value = nickname;
+      return;
+    }
+    if (newNickname !== nickname) {
+      await App.DB.setProfile(uid, { nickname: newNickname });
+      App.Toast.show('닉네임 변경 완료');
+    }
+  });
+
+  nicknameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      nicknameInput.blur();
+    }
+  });
+
+  // Secret diaries
   try {
     const diaries = await App.DB.getSecretDiaries(coupleId, uid);
     renderSecretList(diaries);
@@ -82,3 +153,22 @@ App.Router.register('#/my', async () => {
     App.Toast.show(`커플 ID: ${coupleId.substring(0, 8)}...`);
   };
 });
+
+function resizeProfilePhoto(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+      canvas.width = 200;
+      canvas.height = 200;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}

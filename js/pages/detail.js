@@ -19,6 +19,19 @@ App.Router.register('#/detail', async (params) => {
 
   const isAuthor = diary.authorId === App.Auth.getUid();
 
+  // Load profiles for couple members
+  const couple = App.Couple.currentCouple;
+  const memberUids = [couple.user1, couple.user2].filter(Boolean);
+  const profiles = await App.DB.getProfiles(memberUids);
+
+  function getDisplayName(uid, fallback) {
+    return (profiles[uid] && profiles[uid].nickname) || fallback || '?';
+  }
+
+  function getPhotoURL(uid) {
+    return profiles[uid] && profiles[uid].photoURL;
+  }
+
   function renderDetail() {
     const dateStr = App.formatDate(diary.date);
     app.innerHTML = `
@@ -43,7 +56,7 @@ App.Router.register('#/detail', async (params) => {
           <div class="detail-title">${App.escapeHtml(diary.title).replace(/\n/g, '<br>')}</div>
           <div class="detail-text">${App.escapeHtml(diary.body).replace(/\n/g, '<br>')}</div>
           <div class="detail-meta">
-            <span>by ${App.escapeHtml(diary.authorName)}</span>
+            <span>by ${App.escapeHtml(getDisplayName(diary.authorId, diary.authorName))}</span>
             <span>${dateStr}</span>
           </div>
         </div>
@@ -168,14 +181,15 @@ App.Router.register('#/detail', async (params) => {
         return;
       }
       commentList.innerHTML = comments.map(c => {
-        const initial = (c.authorName || '?')[0];
+        const name = getDisplayName(c.authorId, c.authorName);
+        const photo = getPhotoURL(c.authorId);
         const time = c.createdAt ? formatCommentTime(c.createdAt.toDate()) : '';
         const isMyComment = c.authorId === uid;
         return `
           <div class="comment-item">
-            <div class="comment-avatar">${App.escapeHtml(initial)}</div>
+            <div class="comment-avatar">${photo ? `<img src="${photo}" alt="">` : App.escapeHtml(name[0])}</div>
             <div class="comment-content">
-              <div class="comment-author">${App.escapeHtml(c.authorName)}</div>
+              <div class="comment-author">${App.escapeHtml(name)}</div>
               <div class="comment-text">${App.escapeHtml(c.text).replace(/\n/g, '<br>')}</div>
               <span class="comment-time">${time}${isMyComment ? `<button class="comment-delete" data-id="${c.id}">삭제</button>` : ''}</span>
             </div>

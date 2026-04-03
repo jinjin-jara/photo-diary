@@ -37,6 +37,26 @@ App.DB = {
     });
   },
 
+  // ===== Profile Operations =====
+  async getProfile(uid) {
+    const doc = await App.db.collection('profiles').doc(uid).get();
+    if (!doc.exists) return null;
+    return doc.data();
+  },
+
+  async setProfile(uid, data) {
+    await App.db.collection('profiles').doc(uid).set(data, { merge: true });
+  },
+
+  async getProfiles(uids) {
+    const profiles = {};
+    for (const uid of uids) {
+      const p = await App.DB.getProfile(uid);
+      if (p) profiles[uid] = p;
+    }
+    return profiles;
+  },
+
   // ===== Diary Operations =====
   async getSharedDiaries(coupleId) {
     const snap = await App.db.collection('diaries')
