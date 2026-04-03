@@ -17,126 +17,202 @@ App.Router.register('#/detail', async (params) => {
     return;
   }
 
-  const dateStr = App.formatDate(diary.date);
   const isAuthor = diary.authorId === App.Auth.getUid();
 
-  app.innerHTML = `
-    <div class="detail-page">
-      <div class="detail-header">
-        <button class="detail-back" id="detail-back">&larr;</button>
-        <span class="detail-date">${dateStr}</span>
-        ${diary.isSecret ? '<span style="font-size:12px;color:var(--color-text-muted);">비밀</span>' : ''}
+  function renderDetail() {
+    const dateStr = App.formatDate(diary.date);
+    app.innerHTML = `
+      <div class="detail-page">
+        <div class="detail-header">
+          <button class="detail-back" id="detail-back">&larr;</button>
+          <span class="detail-date">${dateStr}</span>
+          ${diary.isSecret ? '<span style="font-size:12px;color:var(--color-text-muted);">비밀</span>' : ''}
+        </div>
+        ${diary.imageBase64 ? `
+          <div class="detail-image-wrap">
+            <img class="detail-image" src="${diary.imageOriginalBase64 || diary.imageBase64}" alt="">
+          </div>
+        ` : ''}
+        ${isAuthor ? `
+          <div class="detail-actions">
+            <button class="detail-action-btn" id="edit-btn">편집</button>
+            <button class="detail-action-btn delete" id="delete-btn">삭제</button>
+          </div>
+        ` : ''}
+        <div class="detail-body">
+          <div class="detail-title">${App.escapeHtml(diary.title).replace(/\n/g, '<br>')}</div>
+          <div class="detail-text">${App.escapeHtml(diary.body).replace(/\n/g, '<br>')}</div>
+          <div class="detail-meta">
+            <span>by ${App.escapeHtml(diary.authorName)}</span>
+            <span>${dateStr}</span>
+          </div>
+        </div>
+        <div class="comments-section">
+          <div class="comments-title">댓글</div>
+          <div class="comment-list" id="comment-list">
+            <div class="comment-empty">불러오는 중...</div>
+          </div>
+          <div class="comment-input-wrap">
+            <textarea id="comment-input" placeholder="댓글을 남겨보세요" rows="1"></textarea>
+            <button class="comment-send-btn" id="comment-send">
+              <svg viewBox="0 0 24 24" stroke-width="2">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
-      ${diary.imageBase64 ? `
-        <div class="detail-image-wrap">
-          <img class="detail-image" src="${diary.imageOriginalBase64 || diary.imageBase64}" alt="">
-        </div>
-      ` : ''}
-      ${isAuthor ? `
-        <div class="detail-actions">
-          <button class="detail-action-btn delete" id="delete-btn">삭제</button>
-        </div>
-      ` : ''}
-      <div class="detail-body">
-        <div class="detail-title">${App.escapeHtml(diary.title)}</div>
-        <div class="detail-text">${App.escapeHtml(diary.body).replace(/\n/g, '<br>')}</div>
-        <div class="detail-meta">
-          <span>by ${App.escapeHtml(diary.authorName)}</span>
-          <span>${dateStr}</span>
-        </div>
-      </div>
-      <div class="comments-section">
-        <div class="comments-title">댓글</div>
-        <div class="comment-list" id="comment-list">
-          <div class="comment-empty">불러오는 중...</div>
-        </div>
-        <div class="comment-input-wrap">
-          <textarea id="comment-input" placeholder="댓글을 남겨보세요" rows="1"></textarea>
-          <button class="comment-send-btn" id="comment-send">
-            <svg viewBox="0 0 24 24" stroke-width="2">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
+    `;
 
-  // Back button
-  document.getElementById('detail-back').onclick = () => {
-    location.hash = diary.isSecret ? '#/my' : '#/feed';
-  };
+    bindEvents();
+    bindComments();
+  }
 
-  // Delete button
-  if (isAuthor) {
-    document.getElementById('delete-btn').onclick = async () => {
-      if (confirm('정말 삭제할까요?')) {
-        await App.DB.deleteDiary(params.id);
-        App.Toast.show('삭제되었습니다');
-        location.hash = diary.isSecret ? '#/my' : '#/feed';
+  function renderEditMode() {
+    const dateStr = App.formatDate(diary.date);
+    app.innerHTML = `
+      <div class="detail-page">
+        <div class="detail-header">
+          <button class="detail-back" id="edit-cancel">취소</button>
+          <span class="detail-date">편집</span>
+          <button class="detail-back" id="edit-save" style="color:var(--color-accent);font-weight:700;font-size:15px;">저장</button>
+        </div>
+        ${diary.imageBase64 ? `
+          <div class="detail-image-wrap">
+            <img class="detail-image" src="${diary.imageOriginalBase64 || diary.imageBase64}" alt="">
+          </div>
+        ` : ''}
+        <div class="detail-body">
+          <div class="write-field">
+            <label>날짜</label>
+            <input type="date" id="edit-date" value="${diary.date}">
+          </div>
+          <div class="write-field">
+            <label>제목</label>
+            <textarea class="write-title-input" id="edit-title" rows="1">${App.escapeHtml(diary.title)}</textarea>
+          </div>
+          <div class="write-field">
+            <label>본문</label>
+            <textarea id="edit-body">${App.escapeHtml(diary.body)}</textarea>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Auto-resize title
+    const editTitle = document.getElementById('edit-title');
+    editTitle.style.height = 'auto';
+    editTitle.style.height = editTitle.scrollHeight + 'px';
+    editTitle.addEventListener('input', () => {
+      editTitle.style.height = 'auto';
+      editTitle.style.height = editTitle.scrollHeight + 'px';
+    });
+
+    document.getElementById('edit-cancel').onclick = () => renderDetail();
+
+    document.getElementById('edit-save').onclick = async () => {
+      const newDate = document.getElementById('edit-date').value;
+      const newTitle = document.getElementById('edit-title').value.trim();
+      const newBody = document.getElementById('edit-body').value.trim();
+
+      if (!newTitle) {
+        App.Toast.show('제목을 입력해주세요');
+        return;
+      }
+
+      try {
+        await App.DB.updateDiary(params.id, {
+          date: newDate,
+          title: newTitle,
+          body: newBody
+        });
+        diary.date = newDate;
+        diary.title = newTitle;
+        diary.body = newBody;
+        App.Toast.show('수정 완료!');
+        renderDetail();
+      } catch (err) {
+        console.error('Update failed:', err);
+        App.Toast.show('수정에 실패했습니다');
       }
     };
   }
 
-  // Comments
-  const commentList = document.getElementById('comment-list');
-  const commentInput = document.getElementById('comment-input');
-  const uid = App.Auth.getUid();
+  function bindEvents() {
+    document.getElementById('detail-back').onclick = () => {
+      location.hash = diary.isSecret ? '#/my' : '#/feed';
+    };
 
-  function renderComments(comments) {
-    if (!commentList) return;
-    if (comments.length === 0) {
-      commentList.innerHTML = '<div class="comment-empty">아직 댓글이 없어요</div>';
-      return;
-    }
-    commentList.innerHTML = comments.map(c => {
-      const initial = (c.authorName || '?')[0];
-      const time = c.createdAt ? formatCommentTime(c.createdAt.toDate()) : '';
-      const isMyComment = c.authorId === uid;
-      return `
-        <div class="comment-item">
-          <div class="comment-avatar">${App.escapeHtml(initial)}</div>
-          <div class="comment-content">
-            <div class="comment-author">${App.escapeHtml(c.authorName)}</div>
-            <div class="comment-text">${App.escapeHtml(c.text).replace(/\n/g, '<br>')}</div>
-            <span class="comment-time">${time}${isMyComment ? `<button class="comment-delete" data-id="${c.id}">삭제</button>` : ''}</span>
-          </div>
-        </div>
-      `;
-    }).join('');
+    if (isAuthor) {
+      document.getElementById('edit-btn').onclick = () => renderEditMode();
 
-    commentList.querySelectorAll('.comment-delete').forEach(btn => {
-      btn.onclick = async () => {
-        await App.DB.deleteComment(btn.dataset.id);
+      document.getElementById('delete-btn').onclick = async () => {
+        if (confirm('정말 삭제할까요?')) {
+          await App.DB.deleteDiary(params.id);
+          App.Toast.show('삭제되었습니다');
+          location.hash = diary.isSecret ? '#/my' : '#/feed';
+        }
       };
-    });
+    }
   }
 
-  // Real-time comments listener
-  const unsub = App.DB.onCommentsChange(params.id, renderComments);
-  App.Router.addUnsubscriber(unsub);
+  function bindComments() {
+    const commentList = document.getElementById('comment-list');
+    const commentInput = document.getElementById('comment-input');
+    const uid = App.Auth.getUid();
 
-  // Auto-resize comment input
-  commentInput.addEventListener('input', () => {
-    commentInput.style.height = 'auto';
-    commentInput.style.height = Math.min(commentInput.scrollHeight, 80) + 'px';
-  });
+    function renderComments(comments) {
+      if (!commentList) return;
+      if (comments.length === 0) {
+        commentList.innerHTML = '<div class="comment-empty">아직 댓글이 없어요</div>';
+        return;
+      }
+      commentList.innerHTML = comments.map(c => {
+        const initial = (c.authorName || '?')[0];
+        const time = c.createdAt ? formatCommentTime(c.createdAt.toDate()) : '';
+        const isMyComment = c.authorId === uid;
+        return `
+          <div class="comment-item">
+            <div class="comment-avatar">${App.escapeHtml(initial)}</div>
+            <div class="comment-content">
+              <div class="comment-author">${App.escapeHtml(c.authorName)}</div>
+              <div class="comment-text">${App.escapeHtml(c.text).replace(/\n/g, '<br>')}</div>
+              <span class="comment-time">${time}${isMyComment ? `<button class="comment-delete" data-id="${c.id}">삭제</button>` : ''}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
 
-  // Send comment
-  document.getElementById('comment-send').onclick = async () => {
-    const text = commentInput.value.trim();
-    if (!text) return;
+      commentList.querySelectorAll('.comment-delete').forEach(btn => {
+        btn.onclick = async () => {
+          await App.DB.deleteComment(btn.dataset.id);
+        };
+      });
+    }
 
-    commentInput.value = '';
-    commentInput.style.height = 'auto';
+    const unsub = App.DB.onCommentsChange(params.id, renderComments);
+    App.Router.addUnsubscriber(unsub);
 
-    await App.DB.createComment({
-      diaryId: params.id,
-      authorId: uid,
-      authorName: App.Auth.getDisplayName(),
-      text: text
+    commentInput.addEventListener('input', () => {
+      commentInput.style.height = 'auto';
+      commentInput.style.height = Math.min(commentInput.scrollHeight, 80) + 'px';
     });
-  };
+
+    document.getElementById('comment-send').onclick = async () => {
+      const text = commentInput.value.trim();
+      if (!text) return;
+      commentInput.value = '';
+      commentInput.style.height = 'auto';
+      await App.DB.createComment({
+        diaryId: params.id,
+        authorId: uid,
+        authorName: App.Auth.getDisplayName(),
+        text: text
+      });
+    };
+  }
+
+  renderDetail();
 });
 
 function formatCommentTime(date) {

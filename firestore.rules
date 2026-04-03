@@ -34,6 +34,10 @@ service cloud.firestore {
         isCoupleMatched(resource.data.coupleId, request.auth.uid) &&
         (!resource.data.isSecret || resource.data.authorId == request.auth.uid);
 
+      // Only author can update
+      allow update: if request.auth != null &&
+        resource.data.authorId == request.auth.uid;
+
       // Only author can delete
       allow delete: if request.auth != null &&
         resource.data.authorId == request.auth.uid;

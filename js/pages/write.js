@@ -146,9 +146,9 @@ App.Router.register('#/write', async () => {
     const coupleId = App.Couple.currentCouple.id;
 
     if (!isSecret) {
-      const exists = await App.DB.checkDateExists(coupleId, date);
+      const exists = await App.DB.checkDateExists(coupleId, date, App.Auth.getUid());
       if (exists) {
-        App.Toast.show('이미 해당 날짜에 기록이 있습니다');
+        App.Toast.show('이미 해당 날짜에 내 기록이 있습니다');
         return;
       }
     }

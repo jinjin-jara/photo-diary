@@ -63,10 +63,11 @@ App.DB = {
     return { id: doc.id, ...doc.data() };
   },
 
-  async checkDateExists(coupleId, date) {
+  async checkDateExists(coupleId, date, authorId) {
     const snap = await App.db.collection('diaries')
       .where('coupleId', '==', coupleId)
       .where('date', '==', date)
+      .where('authorId', '==', authorId)
       .where('isSecret', '==', false)
       .limit(1)
       .get();
@@ -79,6 +80,10 @@ App.DB = {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     return doc.id;
+  },
+
+  async updateDiary(diaryId, data) {
+    await App.db.collection('diaries').doc(diaryId).update(data);
   },
 
   async deleteDiary(diaryId) {
