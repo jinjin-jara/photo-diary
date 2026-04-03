@@ -8,14 +8,17 @@ App.Couple = {
   },
 
   getInviteCodeFromURL() {
+    // Check regular query params first (?invite=xxx), then hash params (#/...?invite=xxx)
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('invite')) return urlParams.get('invite');
     const hash = location.hash;
     const match = hash.match(/[?&]invite=([^&]+)/);
     return match ? match[1] : null;
   },
 
   getInviteLink(code) {
-    const base = location.href.split('#')[0];
-    return `${base}#/couple-link?invite=${code}`;
+    const base = location.href.split('?')[0].split('#')[0];
+    return `${base}?invite=${code}`;
   },
 
   async loadCouple() {
