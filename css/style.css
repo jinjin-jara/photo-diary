@@ -443,6 +443,7 @@ body {
 .write-field textarea,
 .write-field select {
   width: 100%;
+  max-width: 100%;
   padding: 12px 14px;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -452,6 +453,8 @@ body {
   color: var(--color-text);
   outline: none;
   transition: border-color 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .write-field input:focus,
@@ -463,6 +466,70 @@ body {
   min-height: 120px;
   resize: vertical;
   line-height: 1.8;
+}
+
+.write-field textarea.write-title-input {
+  min-height: 0;
+  height: 44px;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.6;
+}
+
+/* ===== Write Feed Preview ===== */
+.write-preview-section {
+  margin-bottom: 20px;
+}
+
+.write-preview-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.write-preview-cell {
+  width: 100px;
+  aspect-ratio: 3/4;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.write-preview-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.write-preview-cell .preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--color-overlay);
+}
+
+.write-preview-cell .preview-memo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.write-preview-cell .preview-memo-inner {
+  background: var(--color-memo-bg);
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.write-preview-cell .preview-memo-text {
+  font-family: var(--font-main);
+  color: var(--color-text);
+  font-size: 9px;
+  line-height: 1.5;
+  word-break: keep-all;
 }
 
 .write-toggle {

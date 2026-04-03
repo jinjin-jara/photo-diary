@@ -20,6 +20,19 @@ App.Router.register('#/write', async () => {
         </div>
       </div>
 
+      <div class="write-preview-section hidden" id="feed-preview-section">
+        <div class="write-preview-label">피드 미리보기</div>
+        <div class="write-preview-cell" id="feed-preview-cell">
+          <img id="feed-preview-img" src="" alt="">
+          <div class="preview-overlay"></div>
+          <div class="preview-memo">
+            <div class="preview-memo-inner">
+              <div class="preview-memo-text" id="feed-preview-title"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="write-field">
         <label>날짜</label>
         <input type="date" id="write-date" value="${today}">
@@ -27,7 +40,7 @@ App.Router.register('#/write', async () => {
 
       <div class="write-field">
         <label>제목</label>
-        <input type="text" id="write-title" placeholder="오늘 하루를 한 줄로">
+        <textarea class="write-title-input" id="write-title" placeholder="오늘 하루를 한 줄로" rows="1"></textarea>
       </div>
 
       <div class="write-field">
@@ -53,11 +66,33 @@ App.Router.register('#/write', async () => {
   let croppedImage = null;
   let originalImage = null;
 
-  // Photo upload
   const photoUpload = document.getElementById('photo-upload');
   const photoInput = document.getElementById('photo-input');
   const placeholder = document.getElementById('photo-placeholder');
+  const previewSection = document.getElementById('feed-preview-section');
+  const previewImg = document.getElementById('feed-preview-img');
+  const previewTitle = document.getElementById('feed-preview-title');
+  const titleInput = document.getElementById('write-title');
 
+  // Auto-resize title textarea
+  function autoResizeTitle() {
+    titleInput.style.height = 'auto';
+    titleInput.style.height = titleInput.scrollHeight + 'px';
+  }
+
+  titleInput.addEventListener('input', () => {
+    autoResizeTitle();
+    updateFeedPreview();
+  });
+
+  function updateFeedPreview() {
+    const title = titleInput.value.trim();
+    if (croppedImage) {
+      previewTitle.innerHTML = App.escapeHtml(title).replace(/\n/g, '<br>') || '&nbsp;';
+    }
+  }
+
+  // Photo upload
   photoUpload.onclick = () => photoInput.click();
 
   photoInput.onchange = async (e) => {
@@ -65,12 +100,9 @@ App.Router.register('#/write', async () => {
     if (!file) return;
 
     try {
-      // Get original resized image
       const original = await App.Image.fileToBase64(file);
-
-      // Open crop modal
       const cropped = await App.Image.openCropModal(original);
-      if (!cropped) return; // User cancelled
+      if (!cropped) return;
 
       croppedImage = cropped;
       originalImage = original;
@@ -83,6 +115,11 @@ App.Router.register('#/write', async () => {
       }
       img.src = croppedImage;
       placeholder.style.display = 'none';
+
+      // Show feed preview
+      previewSection.classList.remove('hidden');
+      previewImg.src = croppedImage;
+      updateFeedPreview();
     } catch (err) {
       console.error('Image crop failed:', err);
       App.Toast.show('이미지 처리에 실패했습니다');
@@ -92,7 +129,7 @@ App.Router.register('#/write', async () => {
   // Submit
   document.getElementById('write-submit').onclick = async () => {
     const date = document.getElementById('write-date').value;
-    const title = document.getElementById('write-title').value.trim();
+    const title = titleInput.value.trim();
     const body = document.getElementById('write-body').value.trim();
     const isSecret = document.getElementById('write-secret').checked;
 
@@ -108,7 +145,6 @@ App.Router.register('#/write', async () => {
 
     const coupleId = App.Couple.currentCouple.id;
 
-    // Check duplicate date for shared diary
     if (!isSecret) {
       const exists = await App.DB.checkDateExists(coupleId, date);
       if (exists) {
