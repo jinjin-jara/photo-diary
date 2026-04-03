@@ -18,9 +18,9 @@
   --color-border: #efe8da;
   --color-accent: #5a5040;
   --grid-gap: 10px;
-  --memo-padding: 18px 28px;
-  --memo-font-size: 14px;
-  --memo-line-height: 1.6;
+  --memo-padding: 10px 14px;
+  --memo-font-size: 11px;
+  --memo-line-height: 1.5;
 }
 
 html, body {
