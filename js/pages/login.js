@@ -21,6 +21,18 @@ App.Router.register('#/login', async () => {
   document.getElementById('google-login-btn').onclick = async () => {
     const user = await App.Auth.signInWithGoogle();
     if (user) {
+      // Check for pending invite code (saved by router.init from URL)
+      const pendingInvite = sessionStorage.getItem('pendingInvite');
+      if (pendingInvite) {
+        sessionStorage.removeItem('pendingInvite');
+        const success = await App.Couple.acceptInvite(pendingInvite);
+        if (success) {
+          App.Toast.show('커플 연결 완료!');
+          location.hash = '#/feed';
+          return;
+        }
+      }
+
       await App.Couple.loadCouple();
       if (App.Couple.isLinked()) {
         location.hash = '#/feed';
