@@ -50,7 +50,8 @@ App.Router.register('#/write', async () => {
     </div>
   `;
 
-  let selectedImage = null;
+  let croppedImage = null;
+  let originalImage = null;
 
   // Photo upload
   const photoUpload = document.getElementById('photo-upload');
@@ -64,17 +65,26 @@ App.Router.register('#/write', async () => {
     if (!file) return;
 
     try {
-      selectedImage = await App.Image.fileToBase64(file);
+      // Get original resized image
+      const original = await App.Image.fileToBase64(file);
+
+      // Open crop modal
+      const cropped = await App.Image.openCropModal(original);
+      if (!cropped) return; // User cancelled
+
+      croppedImage = cropped;
+      originalImage = original;
+
       photoUpload.classList.add('has-image');
-      // Show preview
       let img = photoUpload.querySelector('img');
       if (!img) {
         img = document.createElement('img');
         photoUpload.appendChild(img);
       }
-      img.src = selectedImage;
+      img.src = croppedImage;
       placeholder.style.display = 'none';
     } catch (err) {
+      console.error('Image crop failed:', err);
       App.Toast.show('이미지 처리에 실패했습니다');
     }
   };
@@ -91,7 +101,7 @@ App.Router.register('#/write', async () => {
       return;
     }
 
-    if (!isSecret && !selectedImage) {
+    if (!isSecret && !croppedImage) {
       App.Toast.show('사진을 선택해주세요');
       return;
     }
@@ -119,7 +129,8 @@ App.Router.register('#/write', async () => {
         date: date,
         title: title,
         body: body,
-        imageBase64: selectedImage || '',
+        imageBase64: croppedImage || '',
+        imageOriginalBase64: originalImage || '',
         isSecret: isSecret
       });
 

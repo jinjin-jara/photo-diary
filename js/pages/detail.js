@@ -30,7 +30,7 @@ App.Router.register('#/detail', async (params) => {
       </div>
       ${diary.imageBase64 ? `
         <div class="detail-image-wrap">
-          <img class="detail-image" src="${diary.imageBase64}" alt="">
+          <img class="detail-image" src="${diary.imageOriginalBase64 || diary.imageBase64}" alt="">
         </div>
       ` : ''}
       ${isAuthor ? `
