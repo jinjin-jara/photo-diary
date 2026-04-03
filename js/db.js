@@ -85,6 +85,37 @@ App.DB = {
     await App.db.collection('diaries').doc(diaryId).delete();
   },
 
+  // ===== Comment Operations =====
+  async getComments(diaryId) {
+    const snap = await App.db.collection('comments')
+      .where('diaryId', '==', diaryId)
+      .orderBy('createdAt', 'asc')
+      .get();
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+
+  async createComment(data) {
+    const doc = await App.db.collection('comments').add({
+      ...data,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return doc.id;
+  },
+
+  async deleteComment(commentId) {
+    await App.db.collection('comments').doc(commentId).delete();
+  },
+
+  onCommentsChange(diaryId, callback) {
+    return App.db.collection('comments')
+      .where('diaryId', '==', diaryId)
+      .orderBy('createdAt', 'asc')
+      .onSnapshot((snap) => {
+        const comments = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(comments);
+      });
+  },
+
   onSharedDiariesChange(coupleId, callback) {
     return App.db.collection('diaries')
       .where('coupleId', '==', coupleId)
