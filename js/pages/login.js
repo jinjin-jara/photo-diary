@@ -22,10 +22,10 @@ App.Router.register('#/login', async () => {
     const user = await App.Auth.signInWithGoogle();
     if (user) {
       // Check for pending invite code (saved by router.init from URL)
-      const pendingInvite = sessionStorage.getItem('pendingInvite');
-      if (pendingInvite) {
-        sessionStorage.removeItem('pendingInvite');
-        const success = await App.Couple.acceptInvite(pendingInvite);
+      if (App._pendingInvite) {
+        const code = App._pendingInvite;
+        App._pendingInvite = null;
+        const success = await App.Couple.acceptInvite(code);
         if (success) {
           App.Toast.show('커플 연결 완료!');
           location.hash = '#/feed';
@@ -36,7 +36,7 @@ App.Router.register('#/login', async () => {
       await App.Couple.loadCouple();
       if (App.Couple.isLinked()) {
         location.hash = '#/feed';
-      } else if (App.Couple.currentCouple || sessionStorage.getItem('setupMode')) {
+      } else if (App.Couple.currentCouple || App._setupMode) {
         location.hash = '#/couple-link';
       } else {
         App.Toast.show('접근 권한이 없습니다');

@@ -34,21 +34,21 @@ App.Router = {
     // Save setup mode and invite code early (before any redirects strip query params)
     const initHash = location.hash || '';
     if (initHash.includes('setup=1')) {
-      sessionStorage.setItem('setupMode', '1');
+      App._setupMode = true;
     }
     const urlInvite = App.Couple.getInviteCodeFromURL();
     if (urlInvite) {
-      sessionStorage.setItem('pendingInvite', urlInvite);
+      App._pendingInvite = urlInvite;
     }
 
     // Wait for auth state
     const user = await App.Auth.init();
 
-    // Check for invite code from URL or sessionStorage (persists through Google redirect)
-    const inviteCode = urlInvite || sessionStorage.getItem('pendingInvite');
+    // Check for invite code
+    const inviteCode = urlInvite || App._pendingInvite;
 
     if (inviteCode && user) {
-      sessionStorage.removeItem('pendingInvite');
+      App._pendingInvite = null;
       await App.Couple.loadCouple();
       if (!App.Couple.isLinked()) {
         const success = await App.Couple.acceptInvite(inviteCode);
@@ -73,16 +73,11 @@ App.Router = {
       }
 
       // Access control: must be in a couple, have pending couple, or setup mode
-      const isSetupMode = sessionStorage.getItem('setupMode');
-      if (!App.Couple.isLinked() && !App.Couple.currentCouple && !isSetupMode) {
+      if (!App.Couple.isLinked() && !App.Couple.currentCouple && !App._setupMode) {
         // Not in any couple and no setup permission → unauthorized
         App.Toast.show('접근 권한이 없습니다');
         await App.Auth.signOut();
         return;
-      }
-      // Clear setup mode after successful couple creation
-      if (App.Couple.currentCouple && isSetupMode) {
-        sessionStorage.removeItem('setupMode');
       }
 
       if (!App.Couple.isLinked()) {
