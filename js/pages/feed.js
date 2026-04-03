@@ -6,9 +6,6 @@ App.Router.register('#/feed', async () => {
 
   app.innerHTML = `
     <div class="feed-page">
-      <div class="feed-header">
-        <h1>우리의 하루</h1>
-      </div>
       <div class="feed-grid" id="feed-grid">
         <div class="loading">불러오는 중...</div>
       </div>
