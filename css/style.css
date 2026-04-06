@@ -569,6 +569,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   z-index: 2;
 }
 
@@ -1085,7 +1086,7 @@ body {
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
   scrollbar-width: none;
   border-radius: 6px;
   gap: 0;
