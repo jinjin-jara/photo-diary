@@ -87,16 +87,24 @@ App.Router.register('#/write', async () => {
     images.forEach((img, idx) => {
       const slot = document.createElement('div');
       slot.className = 'write-photo-slot has-image';
-      slot.innerHTML = `
-        <img src="${img.base64}" alt="">
-        <button class="write-photo-slot-remove" data-idx="${idx}" title="삭제">×</button>
-      `;
-      slot.querySelector('.write-photo-slot-remove').onclick = (e) => {
+
+      const imgEl = document.createElement('img');
+      imgEl.src = img.base64;
+      imgEl.alt = '';
+      slot.appendChild(imgEl);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'write-photo-slot-remove';
+      removeBtn.title = '삭제';
+      removeBtn.textContent = '×';
+      removeBtn.onclick = (e) => {
         e.stopPropagation();
         images.splice(idx, 1);
         renderSlots();
         updateFeedPreviewFromImages();
       };
+      slot.appendChild(removeBtn);
+
       slotsContainer.appendChild(slot);
     });
 
