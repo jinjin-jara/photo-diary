@@ -36,7 +36,7 @@ App.Router.register('#/feed', async () => {
       return `
         <div class="feed-cell" data-id="${diary.id}">
           ${thumb
-            ? `<img class="feed-cell-img" src="${thumb}" alt="">`
+            ? `<img class="feed-cell-img" src="${App.escapeHtml(thumb)}" alt="">`
             : `<div class="feed-cell-img" style="background:#d4c5b0;"></div>`
           }
           <div class="feed-cell-overlay"></div>
