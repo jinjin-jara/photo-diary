@@ -126,10 +126,14 @@ App.Router.register('#/my', async () => {
 
     list.innerHTML = diaries.map(diary => `
       <div class="my-diary-item" data-id="${diary.id}">
-        ${diary.imageBase64
-          ? `<img class="my-diary-thumb" src="${diary.imageBase64}" alt="">`
-          : `<div class="my-diary-thumb-empty">&#128221;</div>`
-        }
+        ${(function() {
+          const src = (diary.images && diary.images.length > 0)
+            ? diary.images[0].base64
+            : diary.imageBase64 || null;
+          return src
+            ? `<img class="my-diary-thumb" src="${App.escapeHtml(src)}" alt="">`
+            : `<div class="my-diary-thumb-empty">&#128221;</div>`;
+        })()}
         <div class="my-diary-info">
           <div class="my-diary-title">${App.escapeHtml(diary.title)}</div>
           <div class="my-diary-date">${diary.date}</div>
