@@ -8,17 +8,7 @@ App.Router.register('#/write', async () => {
     <div class="write-page">
       <h2>하루 기록</h2>
 
-      <div class="write-photo-upload" id="photo-upload">
-        <input type="file" accept="image/*" id="photo-input" style="display:none">
-        <div class="write-photo-placeholder" id="photo-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <path d="M21 15l-5-5L5 21"/>
-          </svg>
-          <span>사진을 선택해주세요</span>
-        </div>
-      </div>
+      <div class="write-photo-slots" id="photo-slots"></div>
 
       <div class="write-preview-section hidden" id="feed-preview-section">
         <div class="write-preview-label">피드 미리보기</div>
@@ -63,18 +53,16 @@ App.Router.register('#/write', async () => {
     </div>
   `;
 
-  let croppedImage = null;
-  let originalImage = null;
+  // images: [{base64, originalBase64}, ...]
+  const images = [];
+  const MAX_PHOTOS = 3;
 
-  const photoUpload = document.getElementById('photo-upload');
-  const photoInput = document.getElementById('photo-input');
-  const placeholder = document.getElementById('photo-placeholder');
+  const slotsContainer = document.getElementById('photo-slots');
   const previewSection = document.getElementById('feed-preview-section');
   const previewImg = document.getElementById('feed-preview-img');
   const previewTitle = document.getElementById('feed-preview-title');
   const titleInput = document.getElementById('write-title');
 
-  // Auto-resize title textarea
   function autoResizeTitle() {
     titleInput.style.height = 'auto';
     titleInput.style.height = titleInput.scrollHeight + 'px';
@@ -87,44 +75,85 @@ App.Router.register('#/write', async () => {
 
   function updateFeedPreview() {
     const title = titleInput.value.trim();
-    if (croppedImage) {
+    if (images.length > 0) {
       previewTitle.innerHTML = App.escapeHtml(title).replace(/\n/g, '<br>') || '&nbsp;';
     }
   }
 
-  // Photo upload
-  photoUpload.onclick = () => photoInput.click();
+  function renderSlots() {
+    slotsContainer.innerHTML = '';
 
-  photoInput.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    // Render filled slots
+    images.forEach((img, idx) => {
+      const slot = document.createElement('div');
+      slot.className = 'write-photo-slot has-image';
+      slot.innerHTML = `
+        <img src="${img.base64}" alt="">
+        <button class="write-photo-slot-remove" data-idx="${idx}" title="삭제">×</button>
+      `;
+      slot.querySelector('.write-photo-slot-remove').onclick = (e) => {
+        e.stopPropagation();
+        images.splice(idx, 1);
+        renderSlots();
+        updateFeedPreviewFromImages();
+      };
+      slotsContainer.appendChild(slot);
+    });
 
-    try {
-      const original = await App.Image.fileToBase64(file);
-      const cropped = await App.Image.openCropModal(original);
-      if (!cropped) return;
+    // Render add slot if under limit
+    if (images.length < MAX_PHOTOS) {
+      const addSlot = document.createElement('div');
+      addSlot.className = 'write-photo-slot';
+      addSlot.innerHTML = `
+        <div class="write-photo-slot-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="M21 15l-5-5L5 21"/>
+          </svg>
+          <span>${images.length === 0 ? '사진 선택' : '추가'}</span>
+        </div>
+      `;
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      addSlot.appendChild(fileInput);
 
-      croppedImage = cropped;
-      originalImage = original;
+      addSlot.onclick = () => fileInput.click();
 
-      photoUpload.classList.add('has-image');
-      let img = photoUpload.querySelector('img');
-      if (!img) {
-        img = document.createElement('img');
-        photoUpload.appendChild(img);
-      }
-      img.src = croppedImage;
-      placeholder.style.display = 'none';
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        fileInput.value = '';
+        try {
+          const original = await App.Image.fileToBase64(file);
+          const cropped = await App.Image.openCropModal(original);
+          if (!cropped) return;
+          images.push({ base64: cropped, originalBase64: original });
+          renderSlots();
+          updateFeedPreviewFromImages();
+        } catch (err) {
+          console.error('Image crop failed:', err);
+          App.Toast.show('이미지 처리에 실패했습니다');
+        }
+      };
 
-      // Show feed preview
-      previewSection.classList.remove('hidden');
-      previewImg.src = croppedImage;
-      updateFeedPreview();
-    } catch (err) {
-      console.error('Image crop failed:', err);
-      App.Toast.show('이미지 처리에 실패했습니다');
+      slotsContainer.appendChild(addSlot);
     }
-  };
+  }
+
+  function updateFeedPreviewFromImages() {
+    if (images.length > 0) {
+      previewSection.classList.remove('hidden');
+      previewImg.src = images[0].base64;
+      updateFeedPreview();
+    } else {
+      previewSection.classList.add('hidden');
+    }
+  }
+
+  renderSlots();
 
   // Submit
   document.getElementById('write-submit').onclick = async () => {
@@ -138,7 +167,7 @@ App.Router.register('#/write', async () => {
       return;
     }
 
-    if (!isSecret && !croppedImage) {
+    if (!isSecret && images.length === 0) {
       App.Toast.show('사진을 선택해주세요');
       return;
     }
@@ -165,8 +194,7 @@ App.Router.register('#/write', async () => {
         date: date,
         title: title,
         body: body,
-        imageBase64: croppedImage || '',
-        imageOriginalBase64: originalImage || '',
+        images: images,
         isSecret: isSecret
       });
 
