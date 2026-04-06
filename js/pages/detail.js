@@ -135,6 +135,7 @@ App.Router.register('#/detail', async (params) => {
           <button class="detail-back" id="edit-save" style="color:var(--color-accent);font-weight:700;font-size:15px;">저장</button>
         </div>
         ${renderPhotoSection(normalizeDiaryImages(diary))}
+      ${normalizeDiaryImages(diary).length > 0 ? '<div style="text-align:center;font-size:12px;color:var(--color-text-muted);padding:6px 0 2px;">사진은 수정할 수 없습니다</div>' : ''}
         <div class="detail-body">
           <div class="write-field">
             <label>날짜</label>
