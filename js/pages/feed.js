@@ -25,20 +25,29 @@ App.Router.register('#/feed', async () => {
       return;
     }
 
-    grid.innerHTML = diaries.map(diary => `
-      <div class="feed-cell" data-id="${diary.id}">
-        ${diary.imageBase64
-          ? `<img class="feed-cell-img" src="${diary.imageBase64}" alt="">`
-          : `<div class="feed-cell-img" style="background:#d4c5b0;"></div>`
-        }
-        <div class="feed-cell-overlay"></div>
-        <div class="feed-cell-memo">
-          <div class="feed-memo">
-            <div class="feed-memo-text">${App.escapeHtml(diary.title)}</div>
+    function getThumb(diary) {
+      if (diary.images && diary.images.length > 0) return diary.images[0].base64;
+      if (diary.imageBase64) return diary.imageBase64;
+      return null;
+    }
+
+    grid.innerHTML = diaries.map(diary => {
+      const thumb = getThumb(diary);
+      return `
+        <div class="feed-cell" data-id="${diary.id}">
+          ${thumb
+            ? `<img class="feed-cell-img" src="${thumb}" alt="">`
+            : `<div class="feed-cell-img" style="background:#d4c5b0;"></div>`
+          }
+          <div class="feed-cell-overlay"></div>
+          <div class="feed-cell-memo">
+            <div class="feed-memo">
+              <div class="feed-memo-text">${App.escapeHtml(diary.title)}</div>
+            </div>
           </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     grid.querySelectorAll('.feed-cell').forEach(cell => {
       cell.onclick = () => {
@@ -51,4 +60,3 @@ App.Router.register('#/feed', async () => {
   const unsub = App.DB.onSharedDiariesChange(coupleId, renderGrid);
   App.Router.addUnsubscriber(unsub);
 });
-
