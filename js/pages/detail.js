@@ -32,8 +32,45 @@ App.Router.register('#/detail', async (params) => {
     return profiles[uid] && profiles[uid].photoURL;
   }
 
+  function normalizeDiaryImages(diary) {
+    if (diary.images && diary.images.length > 0) return diary.images;
+    if (diary.imageBase64) return [{ base64: diary.imageBase64, originalBase64: diary.imageOriginalBase64 || diary.imageBase64 }];
+    return [];
+  }
+
+  function renderPhotoSection(images) {
+    if (images.length === 0) return '';
+
+    if (images.length === 1) {
+      return `
+        <div class="detail-image-wrap">
+          <img class="detail-image" src="${images[0].originalBase64 || images[0].base64}" alt="">
+        </div>
+      `;
+    }
+
+    const slides = images.map(img => `
+      <div class="detail-carousel-slide">
+        <img src="${img.originalBase64 || img.base64}" alt="">
+      </div>
+    `).join('');
+
+    const dots = images.map((_, i) => `
+      <div class="detail-carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></div>
+    `).join('');
+
+    return `
+      <div class="detail-carousel-wrap">
+        <div class="detail-carousel" id="detail-carousel">${slides}</div>
+        <div class="detail-carousel-dots" id="detail-carousel-dots">${dots}</div>
+      </div>
+    `;
+  }
+
   function renderDetail() {
     const dateStr = App.formatDate(diary.date);
+    const images = normalizeDiaryImages(diary);
+
     app.innerHTML = `
       <div class="detail-page">
         <div class="detail-header">
@@ -41,11 +78,7 @@ App.Router.register('#/detail', async (params) => {
           <span class="detail-date">${dateStr}</span>
           ${diary.isSecret ? '<span style="font-size:12px;color:var(--color-text-muted);">비밀</span>' : ''}
         </div>
-        ${diary.imageBase64 ? `
-          <div class="detail-image-wrap">
-            <img class="detail-image" src="${diary.imageOriginalBase64 || diary.imageBase64}" alt="">
-          </div>
-        ` : ''}
+        ${renderPhotoSection(images)}
         ${isAuthor ? `
           <div class="detail-actions">
             <button class="detail-action-btn" id="edit-btn">편집</button>
@@ -77,6 +110,17 @@ App.Router.register('#/detail', async (params) => {
       </div>
     `;
 
+    if (images.length > 1) {
+      const carousel = document.getElementById('detail-carousel');
+      const dotsEl = document.getElementById('detail-carousel-dots');
+      const dotEls = dotsEl ? dotsEl.querySelectorAll('.detail-carousel-dot') : [];
+
+      carousel.addEventListener('scroll', () => {
+        const idx = Math.round(carousel.scrollLeft / carousel.offsetWidth);
+        dotEls.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }, { passive: true });
+    }
+
     bindEvents();
     bindComments();
   }
@@ -90,11 +134,7 @@ App.Router.register('#/detail', async (params) => {
           <span class="detail-date">편집</span>
           <button class="detail-back" id="edit-save" style="color:var(--color-accent);font-weight:700;font-size:15px;">저장</button>
         </div>
-        ${diary.imageBase64 ? `
-          <div class="detail-image-wrap">
-            <img class="detail-image" src="${diary.imageOriginalBase64 || diary.imageBase64}" alt="">
-          </div>
-        ` : ''}
+        ${renderPhotoSection(normalizeDiaryImages(diary))}
         <div class="detail-body">
           <div class="write-field">
             <label>날짜</label>
