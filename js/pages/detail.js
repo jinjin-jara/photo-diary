@@ -152,6 +152,20 @@ App.Router.register('#/detail', async (params) => {
       </div>
     `;
 
+    // Bind carousel scroll → dot indicators
+    const images = normalizeDiaryImages(diary);
+    if (images.length > 1) {
+      const carousel = document.getElementById('detail-carousel');
+      const dotsEl = document.getElementById('detail-carousel-dots');
+      const dotEls = dotsEl ? dotsEl.querySelectorAll('.detail-carousel-dot') : [];
+      if (carousel) {
+        carousel.addEventListener('scroll', () => {
+          const idx = Math.round(carousel.scrollLeft / carousel.offsetWidth);
+          dotEls.forEach((d, i) => d.classList.toggle('active', i === idx));
+        }, { passive: true });
+      }
+    }
+
     // Auto-resize title
     const editTitle = document.getElementById('edit-title');
     editTitle.style.height = 'auto';
