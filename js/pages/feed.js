@@ -10,7 +10,6 @@ App.Router.register('#/feed', async () => {
       <div class="feed-grid" id="feed-grid">
         <div class="loading">불러오는 중...</div>
       </div>
-      <div id="feed-sentinel" style="height:1px;"></div>
     </div>
   `;
 
@@ -74,21 +73,22 @@ App.Router.register('#/feed', async () => {
       appendDiaries(result.diaries);
       lastDoc = result.lastDoc;
       hasMore = result.hasMore;
-      if (!hasMore && observer) observer.disconnect();
     } catch (err) {
       console.error('Feed load failed:', err);
     }
     isLoading = false;
   }
 
-  let observer = null;
-  const sentinel = document.getElementById('feed-sentinel');
-  if (sentinel) {
-    observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) loadNextPage();
-    }, { threshold: 0.1 });
-    observer.observe(sentinel);
+  function onScroll() {
+    if (isLoading || !hasMore) return;
+    const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+    if (scrollTop + clientHeight >= scrollHeight - 200) {
+      loadNextPage();
+    }
   }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  App.Router.addUnsubscriber(() => window.removeEventListener('scroll', onScroll));
 
   loadNextPage();
 });
