@@ -128,7 +128,7 @@ App.Router.register('#/my', async () => {
       <div class="my-diary-item" data-id="${diary.id}">
         ${(function() {
           const src = (diary.images && diary.images.length > 0)
-            ? diary.images[0].base64
+            ? (diary.images[0].url || diary.images[0].base64)
             : diary.imageBase64 || null;
           return src
             ? `<img class="my-diary-thumb" src="${App.escapeHtml(src)}" alt="">`

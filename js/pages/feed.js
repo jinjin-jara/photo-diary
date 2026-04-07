@@ -26,7 +26,9 @@ App.Router.register('#/feed', async () => {
     }
 
     function getThumb(diary) {
-      if (diary.images && diary.images.length > 0) return diary.images[0].base64;
+      if (diary.images && diary.images.length > 0) {
+        return diary.images[0].url || diary.images[0].base64;
+      }
       if (diary.imageBase64) return diary.imageBase64;
       return null;
     }
