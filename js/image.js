@@ -8,7 +8,7 @@ App.Image = {
   compressToTarget(canvas, targetBytes) {
     let quality = App.Image.QUALITY;
     let result = canvas.toDataURL('image/jpeg', quality);
-    while (result.length > targetBytes && quality > 0.5) {
+    while (result.length > targetBytes && quality > 0.7) {
       quality -= 0.1;
       result = canvas.toDataURL('image/jpeg', quality);
     }
@@ -127,13 +127,10 @@ App.Image = {
       };
 
       modal.querySelector('.crop-confirm').onclick = () => {
-        const croppedCanvas = cropper.getCroppedCanvas({
-          width: App.Image.MAX_WIDTH,
-          maxHeight: Math.round(App.Image.MAX_WIDTH * 4 / 3)
-        });
-        const croppedBase64 = App.Image.compressToTarget(croppedCanvas, App.Image.MAX_BASE64_BYTES);
+        const thumbCanvas = cropper.getCroppedCanvas({ width: 300, height: 400 });
+        const thumb = thumbCanvas.toDataURL('image/jpeg', 0.35);
         cleanup();
-        resolve(croppedBase64);
+        resolve({ thumb });
       };
     });
   }
