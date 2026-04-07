@@ -199,7 +199,7 @@ App.Router.register('#/detail', async (params) => {
       <div class="detail-header">
         <button class="detail-back" id="edit-cancel">취소</button>
         <span class="detail-date">편집</span>
-        <button class="detail-back" id="edit-save" style="color:var(--color-accent);font-weight:700;font-size:15px;">저장</button>
+        <button class="detail-back" id="edit-save" style="color:var(--color-accent);font-weight:700;">저장</button>
       </div>
       <div class="write-photo-slots" id="edit-photo-slots"></div>
       <div class="detail-body">
@@ -241,6 +241,10 @@ App.Router.register('#/detail', async (params) => {
       return;
     }
 
+    const saveBtn = document.getElementById('edit-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '저장 중...';
+
     try {
       const originalUrls = normalizeDiaryImages(diary).map(img => img.url).filter(Boolean);
 
@@ -276,6 +280,8 @@ App.Router.register('#/detail', async (params) => {
     } catch (err) {
       console.error('Update failed:', err);
       App.Toast.show('수정에 실패했습니다');
+      saveBtn.disabled = false;
+      saveBtn.textContent = '저장';
     }
   };
 }
