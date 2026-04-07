@@ -202,7 +202,7 @@ App.Router.register('#/write', async () => {
         date: date,
         title: title,
         body: body,
-        images: images,
+        images: images.map(img => ({ base64: img.base64 })),
         isSecret: isSecret
       });
 

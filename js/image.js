@@ -3,6 +3,18 @@ window.App = window.App || {};
 App.Image = {
   MAX_WIDTH: 800,
   QUALITY: 0.7,
+  MAX_BASE64_BYTES: 300 * 1024, // 300KB per image → 3 photos safely under Firestore 1MB limit
+
+  compressToTarget(canvas, targetBytes) {
+    let quality = App.Image.QUALITY;
+    let result = canvas.toDataURL('image/jpeg', quality);
+    while (result.length > targetBytes && quality > 0.2) {
+      quality -= 0.1;
+      result = canvas.toDataURL('image/jpeg', quality);
+    }
+    return result;
+  },
+
 
   async fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -23,7 +35,7 @@ App.Image = {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        const base64 = canvas.toDataURL('image/jpeg', App.Image.QUALITY);
+        const base64 = App.Image.compressToTarget(canvas, App.Image.MAX_BASE64_BYTES);
         resolve(base64);
       };
       img.onerror = reject;
@@ -114,7 +126,7 @@ App.Image = {
           width: App.Image.MAX_WIDTH,
           maxHeight: Math.round(App.Image.MAX_WIDTH * 4 / 3)
         });
-        const croppedBase64 = croppedCanvas.toDataURL('image/jpeg', App.Image.QUALITY);
+        const croppedBase64 = App.Image.compressToTarget(croppedCanvas, App.Image.MAX_BASE64_BYTES);
         cleanup();
         resolve(croppedBase64);
       };
