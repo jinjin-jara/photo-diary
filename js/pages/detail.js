@@ -182,9 +182,15 @@ App.Router.register('#/detail', async (params) => {
         fileInput.value = '';
         try {
           const original = await App.Image.fileToBase64(file);
-          const result = await App.Image.openCropModal(original);
-          if (!result) return;
-          editImages.push({ thumb: result.thumb, url: null, originalBase64: original });
+          let thumb;
+          if (editImages.length === 0) {
+            const result = await App.Image.openCropModal(original);
+            if (!result) return;
+            thumb = result.thumb;
+          } else {
+            thumb = await App.Image.autoThumb(original);
+          }
+          editImages.push({ thumb, url: null, originalBase64: original });
           renderEditPhotoSlots(container);
         } catch (err) {
           App.Toast.show('이미지 처리에 실패했습니다');

@@ -48,6 +48,31 @@ App.Image = {
     });
   },
 
+  autoThumb(base64) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        const srcRatio = img.width / img.height;
+        const targetRatio = 3 / 4;
+        let sx, sy, sw, sh;
+        if (srcRatio > targetRatio) {
+          sh = img.height; sw = sh * targetRatio;
+          sx = (img.width - sw) / 2; sy = 0;
+        } else {
+          sw = img.width; sh = sw / targetRatio;
+          sx = 0; sy = (img.height - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 300, 400);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = base64;
+    });
+  },
+
   openCropModal(imageSrc) {
     return new Promise((resolve) => {
       let cropper = null;

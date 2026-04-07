@@ -136,13 +136,19 @@ App.Router.register('#/write', async () => {
         fileInput.value = '';
         try {
           const original = await App.Image.fileToBase64(file);
-          const result = await App.Image.openCropModal(original);
-          if (!result) return;
-          images.push({ thumb: result.thumb, originalBase64: original });
+          let thumb;
+          if (images.length === 0) {
+            const result = await App.Image.openCropModal(original);
+            if (!result) return;
+            thumb = result.thumb;
+          } else {
+            thumb = await App.Image.autoThumb(original);
+          }
+          images.push({ thumb, originalBase64: original });
           renderSlots();
           updateFeedPreviewFromImages();
         } catch (err) {
-          console.error('Image crop failed:', err);
+          console.error('Image processing failed:', err);
           App.Toast.show('이미지 처리에 실패했습니다');
         }
       };
