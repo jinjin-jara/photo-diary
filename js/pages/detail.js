@@ -126,85 +126,159 @@ App.Router.register('#/detail', async (params) => {
   }
 
   function renderEditMode() {
-    const dateStr = App.formatDate(diary.date);
-    app.innerHTML = `
-      <div class="detail-page">
-        <div class="detail-header">
-          <button class="detail-back" id="edit-cancel">취소</button>
-          <span class="detail-date">편집</span>
-          <button class="detail-back" id="edit-save" style="color:var(--color-accent);font-weight:700;font-size:15px;">저장</button>
-        </div>
-        ${renderPhotoSection(normalizeDiaryImages(diary))}
-      ${normalizeDiaryImages(diary).length > 0 ? '<div style="text-align:center;font-size:12px;color:var(--color-text-muted);padding:6px 0 2px;">사진은 수정할 수 없습니다</div>' : ''}
-        <div class="detail-body">
-          <div class="write-field">
-            <label>날짜</label>
-            <input type="date" id="edit-date" value="${diary.date}">
-          </div>
-          <div class="write-field">
-            <label>제목</label>
-            <textarea class="write-title-input" id="edit-title" rows="1">${App.escapeHtml(diary.title)}</textarea>
-          </div>
-          <div class="write-field">
-            <label>본문</label>
-            <textarea id="edit-body">${App.escapeHtml(diary.body)}</textarea>
-          </div>
-        </div>
-      </div>
-    `;
+  const MAX_PHOTOS = 3;
 
-    // Bind carousel scroll → dot indicators
-    const images = normalizeDiaryImages(diary);
-    if (images.length > 1) {
-      const carousel = document.getElementById('detail-carousel');
-      const dotsEl = document.getElementById('detail-carousel-dots');
-      const dotEls = dotsEl ? dotsEl.querySelectorAll('.detail-carousel-dot') : [];
-      if (carousel) {
-        carousel.addEventListener('scroll', () => {
-          const idx = Math.round(carousel.scrollLeft / carousel.offsetWidth);
-          dotEls.forEach((d, i) => d.classList.toggle('active', i === idx));
-        }, { passive: true });
-      }
-    }
+  let editImages = normalizeDiaryImages(diary).map(img => ({
+    thumb: img.thumb || img.url || img.base64,
+    url: img.url || null,
+    originalBase64: null
+  }));
 
-    // Auto-resize title
-    const editTitle = document.getElementById('edit-title');
-    editTitle.style.height = 'auto';
-    editTitle.style.height = editTitle.scrollHeight + 'px';
-    editTitle.addEventListener('input', () => {
-      editTitle.style.height = 'auto';
-      editTitle.style.height = editTitle.scrollHeight + 'px';
+  function renderEditPhotoSlots(container) {
+    container.innerHTML = '';
+
+    editImages.forEach((img, idx) => {
+      const slot = document.createElement('div');
+      slot.className = 'write-photo-slot has-image';
+      const imgEl = document.createElement('img');
+      imgEl.src = img.thumb;
+      imgEl.alt = '';
+      slot.appendChild(imgEl);
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'write-photo-slot-remove';
+      removeBtn.title = '삭제';
+      removeBtn.textContent = '×';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        editImages.splice(idx, 1);
+        renderEditPhotoSlots(container);
+      };
+      slot.appendChild(removeBtn);
+      container.appendChild(slot);
     });
 
-    document.getElementById('edit-cancel').onclick = () => renderDetail();
-
-    document.getElementById('edit-save').onclick = async () => {
-      const newDate = document.getElementById('edit-date').value;
-      const newTitle = document.getElementById('edit-title').value.trim();
-      const newBody = document.getElementById('edit-body').value.trim();
-
-      if (!newTitle) {
-        App.Toast.show('제목을 입력해주세요');
-        return;
-      }
-
-      try {
-        await App.DB.updateDiary(params.id, {
-          date: newDate,
-          title: newTitle,
-          body: newBody
-        });
-        diary.date = newDate;
-        diary.title = newTitle;
-        diary.body = newBody;
-        App.Toast.show('수정 완료!');
-        renderDetail();
-      } catch (err) {
-        console.error('Update failed:', err);
-        App.Toast.show('수정에 실패했습니다');
-      }
-    };
+    if (editImages.length < MAX_PHOTOS) {
+      const addSlot = document.createElement('div');
+      addSlot.className = 'write-photo-slot';
+      addSlot.innerHTML = `
+        <div class="write-photo-slot-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="M21 15l-5-5L5 21"/>
+          </svg>
+          <span>${editImages.length === 0 ? '사진 선택' : '추가'}</span>
+        </div>
+      `;
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      addSlot.appendChild(fileInput);
+      addSlot.onclick = () => fileInput.click();
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        fileInput.value = '';
+        try {
+          const original = await App.Image.fileToBase64(file);
+          const result = await App.Image.openCropModal(original);
+          if (!result) return;
+          editImages.push({ thumb: result.thumb, url: null, originalBase64: original });
+          renderEditPhotoSlots(container);
+        } catch (err) {
+          App.Toast.show('이미지 처리에 실패했습니다');
+        }
+      };
+      container.appendChild(addSlot);
+    }
   }
+
+  app.innerHTML = `
+    <div class="detail-page">
+      <div class="detail-header">
+        <button class="detail-back" id="edit-cancel">취소</button>
+        <span class="detail-date">편집</span>
+        <button class="detail-back" id="edit-save" style="color:var(--color-accent);font-weight:700;font-size:15px;">저장</button>
+      </div>
+      <div class="write-photo-slots" id="edit-photo-slots"></div>
+      <div class="detail-body">
+        <div class="write-field">
+          <label>날짜</label>
+          <input type="date" id="edit-date" value="${diary.date}">
+        </div>
+        <div class="write-field">
+          <label>제목</label>
+          <textarea class="write-title-input" id="edit-title" rows="1">${App.escapeHtml(diary.title)}</textarea>
+        </div>
+        <div class="write-field">
+          <label>본문</label>
+          <textarea id="edit-body">${App.escapeHtml(diary.body)}</textarea>
+        </div>
+      </div>
+    </div>
+  `;
+
+  renderEditPhotoSlots(document.getElementById('edit-photo-slots'));
+
+  const editTitle = document.getElementById('edit-title');
+  editTitle.style.height = 'auto';
+  editTitle.style.height = editTitle.scrollHeight + 'px';
+  editTitle.addEventListener('input', () => {
+    editTitle.style.height = 'auto';
+    editTitle.style.height = editTitle.scrollHeight + 'px';
+  });
+
+  document.getElementById('edit-cancel').onclick = () => renderDetail();
+
+  document.getElementById('edit-save').onclick = async () => {
+    const newDate = document.getElementById('edit-date').value;
+    const newTitle = document.getElementById('edit-title').value.trim();
+    const newBody = document.getElementById('edit-body').value.trim();
+
+    if (!newTitle) {
+      App.Toast.show('제목을 입력해주세요');
+      return;
+    }
+
+    try {
+      const originalUrls = normalizeDiaryImages(diary).map(img => img.url).filter(Boolean);
+
+      const newImages = await Promise.all(
+        editImages.map((img, idx) => {
+          if (img.url) return Promise.resolve({ thumb: img.thumb, url: img.url });
+          return App.Image.uploadToStorage(
+            img.originalBase64,
+            `diaries/${diary.coupleId}/${params.id}/${Date.now()}_${idx}.jpg`
+          ).then(url => ({ thumb: img.thumb, url }));
+        })
+      );
+
+      const newUrls = newImages.map(i => i.url).filter(Boolean);
+      const removedUrls = originalUrls.filter(u => !newUrls.includes(u));
+      for (const url of removedUrls) {
+        try { await App.storage.refFromURL(url).delete(); } catch (e) { console.warn('Storage delete failed:', e); }
+      }
+
+      await App.DB.updateDiary(params.id, {
+        date: newDate,
+        title: newTitle,
+        body: newBody,
+        images: newImages
+      });
+
+      diary.date = newDate;
+      diary.title = newTitle;
+      diary.body = newBody;
+      diary.images = newImages;
+      App.Toast.show('수정 완료!');
+      renderDetail();
+    } catch (err) {
+      console.error('Update failed:', err);
+      App.Toast.show('수정에 실패했습니다');
+    }
+  };
+}
 
   function bindEvents() {
     document.getElementById('detail-back').onclick = () => {
