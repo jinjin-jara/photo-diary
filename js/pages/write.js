@@ -89,7 +89,7 @@ App.Router.register('#/write', async () => {
       slot.className = 'write-photo-slot has-image';
 
       const imgEl = document.createElement('img');
-      imgEl.src = img.base64;
+      imgEl.src = img.thumb;
       imgEl.alt = '';
       slot.appendChild(imgEl);
 
@@ -136,9 +136,9 @@ App.Router.register('#/write', async () => {
         fileInput.value = '';
         try {
           const original = await App.Image.fileToBase64(file);
-          const cropped = await App.Image.openCropModal(original);
-          if (!cropped) return;
-          images.push({ base64: cropped, originalBase64: original });
+          const result = await App.Image.openCropModal(original);
+          if (!result) return;
+          images.push({ thumb: result.thumb, originalBase64: original });
           renderSlots();
           updateFeedPreviewFromImages();
         } catch (err) {
@@ -154,7 +154,7 @@ App.Router.register('#/write', async () => {
   function updateFeedPreviewFromImages() {
     if (images.length > 0) {
       previewSection.classList.remove('hidden');
-      previewImg.src = images[0].base64;
+      previewImg.src = images[0].thumb;
       updateFeedPreview();
     } else {
       previewSection.classList.add('hidden');
@@ -200,9 +200,9 @@ App.Router.register('#/write', async () => {
       const uploadedImages = await Promise.all(
         images.map((img, idx) =>
           App.Image.uploadToStorage(
-            img.base64,
+            img.originalBase64,
             `diaries/${coupleId}/${diaryRef.id}/${idx}.jpg`
-          ).then(url => ({ url }))
+          ).then(url => ({ thumb: img.thumb, url }))
         )
       );
 
