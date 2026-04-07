@@ -8,13 +8,18 @@ App.Image = {
   compressToTarget(canvas, targetBytes) {
     let quality = App.Image.QUALITY;
     let result = canvas.toDataURL('image/jpeg', quality);
-    while (result.length > targetBytes && quality > 0.2) {
+    while (result.length > targetBytes && quality > 0.5) {
       quality -= 0.1;
       result = canvas.toDataURL('image/jpeg', quality);
     }
     return result;
   },
 
+  async uploadToStorage(base64, path) {
+    const ref = App.storage.ref(path);
+    await ref.putString(base64, 'data_url');
+    return await ref.getDownloadURL();
+  },
 
   async fileToBase64(file) {
     return new Promise((resolve, reject) => {
