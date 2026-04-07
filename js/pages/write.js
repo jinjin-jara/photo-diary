@@ -195,15 +195,27 @@ App.Router.register('#/write', async () => {
     btn.textContent = '저장 중...';
 
     try {
-      await App.DB.createDiary({
+      const diaryRef = App.db.collection('diaries').doc();
+
+      const uploadedImages = await Promise.all(
+        images.map((img, idx) =>
+          App.Image.uploadToStorage(
+            img.base64,
+            `diaries/${coupleId}/${diaryRef.id}/${idx}.jpg`
+          ).then(url => ({ url }))
+        )
+      );
+
+      await diaryRef.set({
         coupleId: coupleId,
         authorId: App.Auth.getUid(),
         authorName: App.Auth.getDisplayName(),
         date: date,
         title: title,
         body: body,
-        images: images.map(img => ({ base64: img.base64 })),
-        isSecret: isSecret
+        images: uploadedImages,
+        isSecret: isSecret,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
       App.Toast.show('기록 완료!');
