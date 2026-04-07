@@ -128,7 +128,7 @@ App.Image = {
 
       modal.querySelector('.crop-confirm').onclick = () => {
         const thumbCanvas = cropper.getCroppedCanvas({ width: 300, height: 400 });
-        const thumb = thumbCanvas.toDataURL('image/jpeg', 0.35);
+        const thumb = thumbCanvas.toDataURL('image/jpeg', 0.7);
         cleanup();
         resolve({ thumb });
       };
