@@ -106,8 +106,15 @@ App.DB = {
     await App.db.collection('diaries').doc(diaryId).update(data);
   },
 
-  async deleteDiary(diaryId) {
+  async deleteDiary(diaryId, imageUrls = []) {
     await App.db.collection('diaries').doc(diaryId).delete();
+    for (const url of imageUrls) {
+      try {
+        await App.storage.refFromURL(url).delete();
+      } catch (e) {
+        console.warn('Storage file delete failed:', url, e);
+      }
+    }
   },
 
   // ===== Comment Operations =====
