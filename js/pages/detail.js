@@ -44,14 +44,14 @@ App.Router.register('#/detail', async (params) => {
     if (images.length === 1) {
       return `
         <div class="detail-image-wrap">
-          <img class="detail-image" src="${images[0].originalBase64 || images[0].base64}" alt="">
+          <img class="detail-image" src="${images[0].url || images[0].originalBase64 || images[0].base64}" alt="">
         </div>
       `;
     }
 
     const slides = images.map(img => `
       <div class="detail-carousel-slide">
-        <img src="${img.originalBase64 || img.base64}" alt="">
+        <img src="${img.url || img.originalBase64 || img.base64}" alt="">
       </div>
     `).join('');
 
@@ -216,7 +216,10 @@ App.Router.register('#/detail', async (params) => {
 
       document.getElementById('delete-btn').onclick = async () => {
         if (confirm('정말 삭제할까요?')) {
-          await App.DB.deleteDiary(params.id);
+          const imageUrls = normalizeDiaryImages(diary)
+            .map(img => img.url)
+            .filter(Boolean);
+          await App.DB.deleteDiary(params.id, imageUrls);
           App.Toast.show('삭제되었습니다');
           location.hash = diary.isSecret ? '#/my' : '#/feed';
         }
