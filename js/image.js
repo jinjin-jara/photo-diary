@@ -52,21 +52,13 @@ App.Image = {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
+        const MAX = 300;
+        let w = img.width, h = img.height;
+        if (w >= h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+        else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
         const canvas = document.createElement('canvas');
-        canvas.width = 300;
-        canvas.height = 400;
-        const ctx = canvas.getContext('2d');
-        const srcRatio = img.width / img.height;
-        const targetRatio = 3 / 4;
-        let sx, sy, sw, sh;
-        if (srcRatio > targetRatio) {
-          sh = img.height; sw = sh * targetRatio;
-          sx = (img.width - sw) / 2; sy = 0;
-        } else {
-          sw = img.width; sh = sw / targetRatio;
-          sx = 0; sy = (img.height - sh) / 2;
-        }
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 300, 400);
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
       img.src = base64;
