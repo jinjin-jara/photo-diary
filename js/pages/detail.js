@@ -115,6 +115,8 @@ App.Router.register('#/detail', async (params) => {
       const dotsEl = document.getElementById('detail-carousel-dots');
       const dotEls = dotsEl ? dotsEl.querySelectorAll('.detail-carousel-dot') : [];
 
+      carousel.scrollLeft = 0;
+
       carousel.addEventListener('scroll', () => {
         const idx = Math.round(carousel.scrollLeft / carousel.offsetWidth);
         dotEls.forEach((d, i) => d.classList.toggle('active', i === idx));
