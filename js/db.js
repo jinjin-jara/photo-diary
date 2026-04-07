@@ -66,6 +66,20 @@ App.DB = {
       .get();
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   },
+  async getSharedDiariesPage(coupleId, limitCount, startAfterDoc = null) {
+    let query = App.db.collection('diaries')
+      .where('coupleId', '==', coupleId)
+      .where('isSecret', '==', false)
+      .orderBy('date', 'desc')
+      .limit(limitCount);
+    if (startAfterDoc) query = query.startAfter(startAfterDoc);
+    const snap = await query.get();
+    return {
+      diaries: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+      lastDoc: snap.docs[snap.docs.length - 1] || null,
+      hasMore: snap.docs.length === limitCount
+    };
+  },
 
   async getSecretDiaries(coupleId, uid) {
     const snap = await App.db.collection('diaries')
