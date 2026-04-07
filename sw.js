@@ -1,4 +1,4 @@
-const CACHE_NAME = 'diary-v7';
+const CACHE_NAME = 'diary-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -35,10 +35,24 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network first for API calls, cache first for assets
-  if (e.request.url.includes('firestore') || e.request.url.includes('googleapis')) {
+  // Firestore API — network only
+  if (e.request.url.includes('firestore.googleapis.com')) return;
+
+  // Firebase Storage images — cache first
+  if (e.request.url.includes('firebasestorage.googleapis.com')) {
+    e.respondWith(
+      caches.match(e.request).then(cached => {
+        if (cached) return cached;
+        return fetch(e.request).then(res => {
+          caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
+          return res;
+        });
+      })
+    );
     return;
   }
+
+  // App assets — network first, cache fallback
   e.respondWith(
     fetch(e.request).then(res => {
       const clone = res.clone();
