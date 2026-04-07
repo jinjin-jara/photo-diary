@@ -13,3 +13,4 @@ App.firebaseConfig = {
 firebase.initializeApp(App.firebaseConfig);
 App.auth = firebase.auth();
 App.db = firebase.firestore();
+App.storage = firebase.storage();
